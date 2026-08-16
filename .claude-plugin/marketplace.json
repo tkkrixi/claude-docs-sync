@@ -6,17 +6,25 @@
   },
   "metadata": {
     "description": "Lean markdown documentation system for AI-assisted work, plus a CLI-desktop skill-sync pattern.",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "plugins": [
     {
       "name": "docs-workflow",
       "source": "./plugins/docs-workflow",
+      "version": "1.0.1",
+      "author": {
+        "name": "tkkrixi"
+      },
       "description": "Data/plan/log documentation discipline, log compaction, knowledge-base map, security checklist, terse-writing and timestamp rules."
     },
     {
       "name": "homelab-extras",
       "source": "./plugins/homelab-extras",
+      "version": "1.0.0",
+      "author": {
+        "name": "tkkrixi"
+      },
       "description": "Optional: own-infra-first decision rule and Proxmox HA new-guest checklist for homelab users."
     }
   ]
