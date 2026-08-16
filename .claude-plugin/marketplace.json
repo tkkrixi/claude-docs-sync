@@ -6,17 +6,17 @@
   },
   "metadata": {
     "description": "Lean markdown documentation system for AI-assisted work, plus a CLI-desktop skill-sync pattern.",
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   "plugins": [
     {
       "name": "docs-workflow",
       "source": "./plugins/docs-workflow",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "tkkrixi"
       },
-      "description": "Data/plan/log documentation discipline, log compaction, knowledge-base map, security checklist, terse-writing and timestamp rules."
+      "description": "Data/plan/log documentation discipline, log compaction, knowledge-base map, security checklist, terse-writing and timestamp rules. [sync test 1.0.2]"
     },
     {
       "name": "homelab-extras",

@@ -1,67 +1,114 @@
 # claude-docs-sync
 
-A working pattern for two unsolved problems in the Claude ecosystem:
+A working pattern for two problems in the Claude ecosystem:
 
-1. **Keeping skills in sync between Claude Code (CLI) and Claude Desktop / Cowork** — there is no
-   native sync ([#20697](https://github.com/anthropics/claude-code/issues/20697),
+1. **Keeping skills in sync between Claude Code (CLI) and Claude Desktop / Cowork.** There is no
+   *automatic* two-way sync ([#20697](https://github.com/anthropics/claude-code/issues/20697),
    [#50644](https://github.com/anthropics/claude-code/issues/50644),
    [#52421](https://github.com/anthropics/claude-code/issues/52421),
    [#53414](https://github.com/anthropics/claude-code/issues/53414),
-   [#36693](https://github.com/anthropics/claude-code/issues/36693)).
+   [#36693](https://github.com/anthropics/claude-code/issues/36693)) — but a **git-based
+   marketplace does give you one-way sync from a repo to both surfaces**, and the setup has
+   several non-obvious steps that are not documented anywhere. They are written down below.
 2. **Keeping the AI's project knowledge lean** — markdown docs that every session loads as
    context, without letting them rot or bloat.
 
-It is not magic: it is git as the single source of truth, one symlink, one packaging script, and a
-documentation discipline encoded as Claude skills so the AI itself follows and maintains it.
+It is not magic: it is git as the single source of truth, plus a documentation discipline encoded
+as Claude skills so the AI itself follows and maintains it.
 
 ## The sync pattern
 
 ```
-                    ┌──────────────────────────────┐
-                    │  git repo (single source)    │
-                    │  your-docs-repo/             │
-                    │    plugins/<your-plugin>/    │
-                    └──────┬───────────────┬───────┘
-             symlink, instant│             │package.sh → .plugin file
-                             ▼             ▼
-                  ┌────────────────┐   ┌─────────────────────────┐
-                  │ Claude Code CLI│   │ Claude Desktop / Cowork │
-                  │ ~/.claude/skills│  │ (manual upload, per     │
-                  │   /<plugin> →  │   │  version — see below)   │
-                  └────────────────┘   └─────────────────────────┘
+                  ┌────────────────────────────────────┐
+                  │  git repo (single source of truth) │
+                  │    .claude-plugin/marketplace.json │
+                  │    plugins/<your-plugin>/          │
+                  └───────┬────────────────────┬───────┘
+            symlink, instant│                  │marketplace, on push
+                            ▼                  ▼
+                 ┌────────────────┐   ┌─────────────────────────┐
+                 │ Claude Code CLI│   │ Claude Desktop / Cowork │
+                 │ ~/.claude/     │   │ Plugins → Add →         │
+                 │   skills/<p> → │   │   Add marketplace       │
+                 └────────────────┘   └─────────────────────────┘
 ```
 
 | Step | Automatic? |
 |---|---|
 | Edit → repo (with a git auto-commit tool, e.g. obsidian-git) | yes, ~10 min |
 | Edit → repo (without) | no — `git add/commit/push` |
-| Repo → CLI | **yes, instant** (symlink) |
-| Repo → Desktop/Cowork | **no** — run `package.sh`, upload the `.plugin` in the app |
+| Repo → CLI, via symlink | **yes, instant** |
+| Repo → CLI, via marketplace | `claude plugin marketplace update <name>` |
+| Repo → Desktop/Cowork, via marketplace | **yes, once "Sync automatically" is on** (see below) |
+| Repo → Desktop/Cowork, via uploaded `.plugin` file | **no** — and there is no update path at all: you must remove the old plugin and install the new file |
 | Desktop/Cowork edit → repo | no — export, copy back, commit |
 
-Setup for the CLI side (one time, per machine):
+### CLI side
 
 ```bash
-ln -s /path/to/your-docs-repo/plugins/docs-workflow ~/.claude/skills/docs-workflow
+ln -s /path/to/your-repo/plugins/your-plugin ~/.claude/skills/your-plugin
 ```
 
-Claude Code reads every subdirectory of `~/.claude/skills/`, so the symlink is all it takes —
-every commit (and every uncommitted edit) is live in the next CLI session.
+Claude Code reads every subdirectory of `~/.claude/skills/`, so the symlink is all it takes — every
+edit is live in the next CLI session, committed or not. Note that the CLI treats the symlink target
+as a plugin **only because it contains a `.claude-plugin/` directory**; without it, nothing loads.
 
-For the Desktop/Cowork side, `scripts/package.sh` validates the skills (frontmatter, names,
-optional `claude plugin validate`) and zips the plugin into a `.plugin` file you upload in the
-app. Two hard-won details it encodes:
+### Desktop / Cowork side — the part nobody documents
+
+**Plugins → Add → Add marketplace**, then enter `owner/repo`. Five things that are easy to get
+wrong, each of which cost us a debugging round:
+
+1. **Only hosted git providers work.** github.com, gitlab.com, bitbucket.org, or a GitHub
+   Enterprise instance configured by your organization. A self-hosted Gitea/Forgejo URL is rejected
+   with *"This host isn't supported."* — so if your source of truth is self-hosted, you need a
+   mirror on one of the supported hosts (a private repo is fine; see point 3).
+2. **`marketplace.json` must be at the repository root**, in `.claude-plugin/marketplace.json`.
+3. **Grant the Claude GitHub App access to the repository.** The app prompts for this; it is what
+   lets the marketplace read the repo — including private ones.
+4. **Turn on "Sync automatically". It is OFF by default, and it is hidden.** In the plugin
+   Directory, click the `...` next to the marketplace's name — the menu shows `Synced commit:
+   <sha>`, a **Sync automatically** toggle, and **Check for updates**. Until you enable the
+   toggle, the marketplace stays pinned at the commit it was added on, and the plugin's `Update`
+   button stays greyed out forever with no explanation.
+5. **Declare `version` on every plugin entry in `marketplace.json`.** Bumping `version` in the
+   plugin's own `plugin.json` is *not* enough — update detection reads the marketplace manifest,
+   so without a per-entry `version` there is nothing to compare and no update is ever offered.
+
+```json
+{
+  "name": "your-marketplace",
+  "owner": { "name": "you", "url": "https://github.com/you" },
+  "metadata": { "description": "...", "version": "1.0.2" },
+  "plugins": [
+    {
+      "name": "your-plugin",
+      "source": "./plugins/your-plugin",
+      "version": "1.0.2",
+      "author": { "name": "you" },
+      "description": "..."
+    }
+  ]
+}
+```
+
+Validate before pushing: `claude plugin validate .claude-plugin/marketplace.json`. Be aware that
+this validator does **not** check that each `SKILL.md`'s `name:` matches its directory name —
+`scripts/package.sh` in this repo does.
+
+Also: do **not** build tooling on the local session cache
+(`~/Library/Application Support/Claude/local-agent-mode-sessions/.../rpm/plugin_<id>/`). The path
+is session-scoped and unstable.
+
+### If you distribute a `.plugin` file instead
+
+`scripts/package.sh` validates the skills (frontmatter, `name` vs. directory, optional
+`claude plugin validate`) and zips the plugin. Two details it encodes:
 
 - the output **filename must not contain the version** — Cowork derives the plugin name from the
   filename, so a versioned filename creates a *new* plugin instead of updating the existing one;
-- bump `version` in `plugin.json` for every upload, and package from a clean git state so the
-  archive copy (`dist/archive/<name>-<version>.plugin`) matches a commit.
-
-Known limitation: the Desktop/Cowork copy is a snapshot in your Claude account. It does not watch
-the repo — no poll, no webhook — and there is no documented programmatic way to update it. One
-manual upload per version is currently the floor. Do **not** build tooling on the local session
-cache (`~/Library/Application Support/Claude/local-agent-mode-sessions/...`): the path is
-session-scoped and unstable.
+- there is **no in-place update for uploaded plugins**: re-uploading fails with "already
+  installed" even after a version bump. You must remove the installed plugin first. This is the
+  main reason to prefer the marketplace route.
 
 ## The documentation system
 
