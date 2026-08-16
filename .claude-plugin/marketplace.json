@@ -1,0 +1,23 @@
+{
+  "name": "claude-docs-sync",
+  "owner": {
+    "name": "tkkrixi",
+    "url": "https://github.com/tkkrixi"
+  },
+  "metadata": {
+    "description": "Lean markdown documentation system for AI-assisted work, plus a CLI-desktop skill-sync pattern.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "docs-workflow",
+      "source": "./plugins/docs-workflow",
+      "description": "Data/plan/log documentation discipline, log compaction, knowledge-base map, security checklist, terse-writing and timestamp rules."
+    },
+    {
+      "name": "homelab-extras",
+      "source": "./plugins/homelab-extras",
+      "description": "Optional: own-infra-first decision rule and Proxmox HA new-guest checklist for homelab users."
+    }
+  ]
+}

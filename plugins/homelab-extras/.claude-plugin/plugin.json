@@ -1,0 +1,9 @@
+{
+  "name": "homelab-extras",
+  "version": "1.0.0",
+  "description": "Optional companions for homelab users: own-infra-first decision rule and a Proxmox HA new-guest checklist.",
+  "author": {
+    "name": "<TODO: your name>"
+  },
+  "keywords": ["homelab", "proxmox", "infrastructure"]
+}

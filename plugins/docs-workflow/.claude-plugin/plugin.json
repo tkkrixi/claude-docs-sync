@@ -1,0 +1,9 @@
+{
+  "name": "docs-workflow",
+  "version": "1.0.0",
+  "description": "A lean markdown documentation system for AI-assisted work: data/plan/log file discipline, log compaction, knowledge-base map, security checklist, terse-writing and timestamp rules.",
+  "author": {
+    "name": "<TODO: your name>"
+  },
+  "keywords": ["documentation", "knowledge-base", "workflow", "skills"]
+}
