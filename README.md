@@ -38,10 +38,27 @@ as Claude skills so the AI itself follows and maintains it.
 | Edit → repo (with a git auto-commit tool, e.g. obsidian-git) | yes, ~10 min |
 | Edit → repo (without) | no — `git add/commit/push` |
 | Repo → CLI, via symlink | **yes, instant** |
-| Repo → CLI, via marketplace | `claude plugin marketplace update <name>` |
+| Repo → CLI, via marketplace added in the CLI | `claude plugin marketplace update <name>` |
 | Repo → Desktop/Cowork, via marketplace | **yes, once "Sync automatically" is on** (see below) |
+| Desktop/claude.ai-installed plugin or uploaded skill → CLI | **yes** — synced to the CLI as `<name>@synced` (see "Native sync" below) |
 | Repo → Desktop/Cowork, via uploaded `.plugin` file | **no** — and there is no update path at all: you must remove the old plugin and install the new file |
 | Desktop/Cowork edit → repo | no — export, copy back, commit |
+
+### Native sync (claude.ai → CLI)
+
+Recent Claude Code versions (observed on 2.1.284, signed in with a claude.ai account) download
+the plugins and skills enabled on your claude.ai account into the CLI:
+`claude plugin list` shows them under **"Synced from claude.ai"** as `<name>@synced`, and
+uploaded account skills land in `~/.claude/skills/synced/`. So a plugin installed in Desktop from
+the marketplace below also reaches the CLI with no extra step.
+
+This is one-way. A skill that exists only in `~/.claude/skills/` is still invisible to
+Desktop/Cowork — for that direction, the git marketplace remains the route.
+
+If you also keep the symlink from the next section, the two copies share a name and the local one
+wins: `"<name>@synced" … not loaded — "<name>@skills-dir" on this machine has the same name and
+takes precedence`. That is usually what you want while editing (the CLI runs your working copy,
+Desktop runs the last pushed commit); remove the symlink if you want the CLI on the pushed version.
 
 ### CLI side
 
@@ -93,7 +110,9 @@ wrong, each of which cost us a debugging round:
 
 Validate before pushing: `claude plugin validate .claude-plugin/marketplace.json`. Be aware that
 this validator does **not** check that each `SKILL.md`'s `name:` matches its directory name —
-`scripts/package.sh` in this repo does.
+`scripts/package.sh` in this repo does. To check that `plugin.json` and the marketplace entry
+agree on `version`, run `claude plugin tag --dry-run plugins/<your-plugin>` (`package.sh` runs it
+too).
 
 Also: do **not** build tooling on the local session cache
 (`~/Library/Application Support/Claude/local-agent-mode-sessions/.../rpm/plugin_<id>/`). The path

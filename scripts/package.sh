@@ -200,6 +200,33 @@ if [[ -n "$CLAUDE_BIN" ]]; then
     echo "ERROR: 'claude plugin validate' reported a problem, see above." >&2
     exit 1
   fi
+
+  # The enclosing marketplace manifest, if the plugin lives in a marketplace repo.
+  MARKETPLACE=""
+  if git -C "$PLUGIN_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    REPO_ROOT="$(git -C "$PLUGIN_DIR" rev-parse --show-toplevel)"
+    if [[ -f "$REPO_ROOT/.claude-plugin/marketplace.json" ]]; then
+      MARKETPLACE="$REPO_ROOT/.claude-plugin/marketplace.json"
+    fi
+  fi
+  if [[ -n "$MARKETPLACE" ]]; then
+    echo
+    echo "Validating the marketplace manifest..."
+    if ! "$CLAUDE_BIN" plugin validate "$MARKETPLACE"; then
+      echo "ERROR: 'claude plugin validate' reported a problem in the marketplace manifest, see above." >&2
+      exit 1
+    fi
+    # 'plugin tag --dry-run' checks that plugin.json and the marketplace entry agree on the version.
+    # -f only skips its dirty-tree and tag-exists checks; the version check still runs.
+    echo
+    echo "Checking that plugin.json and the marketplace entry agree on the version..."
+    if ! TAG_OUT="$("$CLAUDE_BIN" plugin tag --dry-run -f "$PLUGIN_DIR" 2>&1)"; then
+      echo "$TAG_OUT" >&2
+      echo "ERROR: version mismatch between plugin.json and marketplace.json, see above." >&2
+      exit 1
+    fi
+    echo "  OK"
+  fi
 else
   echo "WARNING: no 'claude' CLI on the PATH; skipping the official validation (step 2's own checks did run)." >&2
 fi
